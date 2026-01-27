@@ -1,6 +1,5 @@
-
 import pptxgen from "pptxgenjs";
-import { SlideData } from "../types";
+import { SlideData } from "../types.ts";
 
 export async function generatePptx(slides: SlideData[], fileName?: string): Promise<Blob | void> {
   const pres = new pptxgen();

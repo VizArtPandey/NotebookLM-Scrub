@@ -1,13 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   CheckCircle, AlertCircle, Loader2, 
   ShieldCheck, Zap, Rocket, Presentation, 
   Wand2, Shield, Cpu, Lock, ExternalLink,
   Code2
 } from 'lucide-react';
-import { ProcessingStatus, ProcessingState } from './types';
-import { convertPdfToImages, createPdfFromImages } from './services/pdfService';
-import { generatePptx } from './services/pptxService';
+import { inject } from '@vercel/analytics';
+import { ProcessingStatus, ProcessingState } from './types.ts';
+import { convertPdfToImages, createPdfFromImages } from './services/pdfService.ts';
+import { generatePptx } from './services/pptxService.ts';
 
 const App: React.FC = () => {
   const [state, setState] = useState<ProcessingState>({
@@ -20,6 +21,11 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pptInputRef = useRef<HTMLInputElement>(null);
 
+  // Initialize Vercel Analytics
+  useEffect(() => {
+    inject();
+  }, []);
+
   const updateState = (updates: Partial<ProcessingState>) => {
     setState(prev => ({ ...prev, ...updates }));
   };
@@ -27,7 +33,6 @@ const App: React.FC = () => {
   /**
    * HEURISTIC SCRUBBING ENGINE (100% LOCAL)
    * Samples surrounding pixels to 'heal' the branding areas without calling any external APIs.
-   * This ensures privacy as no image data ever leaves the browser.
    */
   const performHeuristicScrub = async (imageSrc: string, isLastPage: boolean): Promise<string> => {
     return new Promise((resolve) => {
@@ -42,15 +47,13 @@ const App: React.FC = () => {
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
 
-        // Standard NotebookLM Branding Locations
         const killZones = [
-          { x: 74, y: 83, w: 26, h: 17 }, // Bottom-right logo (standard)
+          { x: 74, y: 83, w: 26, h: 17 }, // Bottom-right logo
           { x: 0, y: 87, w: 23, h: 13 }   // Bottom-left variant
         ];
 
-        // Specific handling for common last-page banner styles
         if (isLastPage) {
-          killZones.push({ x: 25, y: 78, w: 50, h: 22 }); // Center-bottom footer banners
+          killZones.push({ x: 25, y: 78, w: 50, h: 22 }); 
         }
 
         killZones.forEach(zone => {
@@ -59,7 +62,6 @@ const App: React.FC = () => {
           const sw = (zone.w / 100) * img.width;
           const sh = (zone.h / 100) * img.height;
 
-          // Contextual Sampling: Look slightly above the target area to find background color
           const sampleY = Math.max(0, sy - 15);
           const sampleX = sx + (sw / 2);
           
@@ -68,11 +70,7 @@ const App: React.FC = () => {
             if (pixel[3] > 0) {
               const r = pixel[0], g = pixel[1], b = pixel[2];
               ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-              
-              // Phase 1: Solid block fill
               ctx.fillRect(sx - 5, sy - 5, sw + 10, sh + 10);
-              
-              // Phase 2: Gradient Blur Patch to feather edges
               ctx.globalAlpha = 0.6;
               ctx.filter = 'blur(12px)';
               ctx.fillRect(sx - 15, sy - 15, sw + 30, sh + 30);
@@ -80,7 +78,7 @@ const App: React.FC = () => {
               ctx.globalAlpha = 1.0;
             }
           } catch (e) {
-            console.warn("Heuristic sampling skipped for a zone.");
+            console.warn("Heuristic sampling skipped.");
           }
         });
 
