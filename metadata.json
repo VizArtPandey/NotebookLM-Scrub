@@ -1,0 +1,5 @@
+{
+  "name": "NotebookLM Scrub",
+  "description": "Open Source tool for scrubbing NotebookLM branding and converting slides to editable PowerPoint presentations. 100% browser-side processing.",
+  "requestFramePermissions": []
+}
